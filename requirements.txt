@@ -1,7 +1,7 @@
-flask
-flask-sqlalchemy
-flask-login
-flask-wtf
-email-validator
-werkzeug
+Flask==3.1.2
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.0.5
+Werkzeug>=3.1.0
+gunicorn==21.2.0
+Jinja2==3.1.2
 
