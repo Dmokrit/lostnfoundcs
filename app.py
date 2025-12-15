@@ -14,18 +14,12 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
-# ===================== DATABASE =====================
-# Use /var/data for Render, else local DB for development
-if os.environ.get('RENDER') == 'true':
-    db_path = '/var/data/lost_and_found.db'
-else:
-    db_path = os.path.join(os.path.dirname(__file__), 'lost_and_found.db')
-
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+# SQLite database in project root (writable on Render)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lost_and_found.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# ===================== UPLOAD CONFIG =====================
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+# Uploads
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -177,7 +171,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
 
-        # Create default admin
+        # Create default admin if not exists
         if not User.query.filter_by(email='admin@student.edu').first():
             admin = User(
                 email='admin@student.edu',
@@ -187,5 +181,5 @@ if __name__ == '__main__':
             db.session.add(admin)
             db.session.commit()
 
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
 
