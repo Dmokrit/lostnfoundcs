@@ -1,14 +1,87 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% block content %}
-<h2>Post Item</h2>
-<form method="post" enctype="multipart/form-data">
-  <input name="title" placeholder="Item title" required><br><br>
-  <textarea name="description" placeholder="Description"></textarea><br><br>
-  <input name="location" placeholder="Location"><br><br>
-  <select name="category"><option>ID</option><option>Electronics</option><option>Clothing</option><option>Other</option></select><br><br>
-  <select name="status"><option>Lost</option><option>Found</option></select><br><br>
-  <input name="contact" placeholder="Contact info"><br><br>
-  <input type="file" name="image"><br><br>
-  <button class="btn">Submit</button>
-</form>
+<div class="container" style="max-width: 600px; margin: 30px auto;">
+    <div class="card" style="box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden;">
+        <div class="card-body" style="padding: 20px;">
+            <h2 style="margin-bottom: 20px;">Post a Lost/Found Item</h2>
+
+            <form method="POST" enctype="multipart/form-data">
+                <div style="margin-bottom: 15px;">
+                    <label for="title"><strong>Title:</strong></label>
+                    <input type="text" id="title" name="title" required
+                           style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="description"><strong>Description:</strong></label>
+                    <textarea id="description" name="description" rows="4"
+                              style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="location"><strong>Location:</strong></label>
+                    <input type="text" id="location" name="location"
+                           style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="category"><strong>Category:</strong></label>
+                    <input type="text" id="category" name="category"
+                           style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="status"><strong>Status:</strong></label>
+                    <select id="status" name="status" required
+                            style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                        <option value="">-- Select Status --</option>
+                        <option value="Lost">Lost</option>
+                        <option value="Found">Found</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="contact"><strong>Contact:</strong></label>
+                    <input type="text" id="contact" name="contact"
+                           style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label for="image"><strong>Image:</strong></label>
+                    <input type="file" id="image" name="image" accept="image/*" 
+                           style="display: block; margin-top: 5px;" onchange="previewImage(event)">
+                    <img id="preview" src="#" alt="Image Preview" 
+                         style="display: none; margin-top: 10px; max-width: 100%; border-radius: 8px;">
+                </div>
+
+                <button type="submit" 
+                        style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">
+                    Submit Item
+                </button>
+            </form>
+
+            <a href="{{ url_for('my_items') }}" 
+               style="display: inline-block; margin-top: 15px; text-decoration: none; color: #007bff;">
+               ← Back to My Items
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewImage(event) {
+    const preview = document.getElementById('preview');
+    const file = event.target.files[0];
+
+    if(file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+    } else {
+        preview.src = '#';
+        preview.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}
+

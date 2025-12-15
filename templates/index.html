@@ -1,25 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2>Lost & Found Items</h2>
-<form method="get">
-  <input name="q" placeholder="Search" value="{{ request.args.q }}">
-  <select name="category">
-    <option value="">All</option>
-    <option>ID</option><option>Electronics</option><option>Clothing</option><option>Other</option>
-  </select>
-  <button>Filter</button>
-</form>
 <div class="grid">
-{% for item in items %}
-  <div class="card">
-    {% if item.image %}
-      <img src="{{ url_for('static', filename='uploads/' + item.image) }}">
-    {% endif %}
-    <h4>{{ item.title }}</h4>
-    <p class="muted">{{ item.status }} • {{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-    <p>{{ item.location }}</p>
-    <p class="muted">Contact: {{ item.contact }}</p>
-  </div>
-{% endfor %}
+    {% for item in items %}
+    <div class="card">
+        {% if item.image %}
+        <img src="{{ url_for('static', filename='uploads/' + item.image) }}">
+        {% endif %}
+        <div class="card-body">
+            <h4>{{ item.title }}</h4>
+
+            {% if item.status %}
+            <span class="badge {% if item.status.lower() == 'lost' %}badge-lost{% elif item.status.lower() == 'found' %}badge-found{% endif %}">
+                {{ item.status }}
+            </span>
+            {% endif %}
+
+            <p class="muted" style="font-size: 0.8em;">Posted on: {{ item.created_at|formatdatetime }}</p>
+
+            <a class="btn" href="{{ url_for('item_detail', item_id=item.id) }}">View Details</a>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
+

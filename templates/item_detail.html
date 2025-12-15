@@ -1,13 +1,59 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h2>{{ item.title }}</h2>
-<p><strong>Status:</strong> {{ item.status }}</p>
-<p><strong>Category:</strong> {{ item.category }}</p>
-<p><strong>Location:</strong> {{ item.location }}</p>
-<p><strong>Contact:</strong> {{ item.contact }}</p>
-<p>{{ item.description }}</p>
-{% if item.image %}
-<img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" style="max-width:400px;">
-{% endif %}
+<div class="container" style="max-width: 700px; margin: 40px auto;">
+    <div class="card shadow" style="border-radius: 12px; overflow: hidden;">
+        {% if item.image %}
+        <img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" 
+             alt="{{ item.title }}" 
+             style="width:100%; max-height:400px; object-fit:cover;">
+        {% endif %}
+        
+        <div class="card-body" style="padding: 25px;">
+            <h1 style="margin-bottom: 15px;">{{ item.title }}</h1>
+
+            <span style="
+                display:inline-block;
+                padding: 6px 12px;
+                border-radius: 12px;
+                background-color: {% if item.status.lower()=='lost' %}#f44336{% else %}#4caf50{% endif %};
+                color:white;
+                font-weight:bold;
+                margin-bottom:15px;
+            ">
+                {{ item.status }}
+            </span>
+
+            <div style="margin-bottom: 10px;">
+                <p><strong>Category:</strong> {{ item.category or 'N/A' }}</p>
+                <p><strong>Location:</strong> {{ item.location or 'N/A' }}</p>
+                <p><strong>Contact:</strong> {{ item.contact or 'N/A' }}</p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <p>{{ item.description or 'No description provided.' }}</p>
+            </div>
+
+            <p class="muted" style="color:#777; font-size:0.9em;">
+                Posted on: {{ item.created_at|formatdatetime }}
+                {% if item.updated_at %}
+                    | Last updated: {{ item.updated_at|formatdatetime }}
+                {% endif %}
+            </p>
+
+            <a href="{{ url_for('index') }}" style="
+                display:inline-block;
+                margin-top:20px;
+                padding:10px 20px;
+                background:#007bff;
+                color:white;
+                border-radius:6px;
+                text-decoration:none;
+            ">
+                ← Back to all items
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
 

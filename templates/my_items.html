@@ -1,12 +1,82 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>My Items</h2>
-<div class="grid">
-{% for item in items %}
-  <div class="card">
-    <h4>{{ item.title }}</h4>
-    <p>{{ item.status }} • {{ 'Approved' if item.approved else 'Pending' }}</p>
-  </div>
-{% endfor %}
+<div class="container" style="max-width: 1000px; margin: 40px auto;">
+    <h2 style="margin-bottom: 25px;">My Items</h2>
+    <div class="grid" style="display:grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap:20px;">
+        {% for item in items %}
+        <div class="card shadow" style="border-radius:12px; overflow:hidden; transition: all 0.3s ease;">
+            {% if item.image %}
+                <img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" 
+                     alt="{{ item.title }}" 
+                     style="width:100%; height:180px; object-fit:cover;">
+            {% else %}
+                <img src="{{ url_for('static', filename='placeholder.png') }}" 
+                     alt="No image" 
+                     style="width:100%; height:180px; object-fit:cover; filter:grayscale(50%);">
+            {% endif %}
+
+            <div class="card-body" style="padding:15px;">
+                <h4 style="margin-bottom:5px;">{{ item.title }}</h4>
+
+                {% if not item.approved %}
+                    <span style="color:orange; font-weight:bold; margin-left:5px;">Pending Approval</span>
+                {% endif %}
+
+                {% if item.status %}
+                <span style="
+                    display:inline-block;
+                    padding:4px 10px;
+                    border-radius:8px;
+                    background-color: {% if item.status.lower()=='lost' %}#f44336{% else %}#4caf50{% endif %};
+                    color:white;
+                    font-weight:bold;
+                    margin-bottom:10px;
+                    margin-top:5px;
+                ">
+                    {{ item.status }}
+                </span>
+                {% endif %}
+
+                <p class="muted" style="color:#777; font-size:0.85em; margin-bottom:10px;">
+                    Posted on: {{ item.created_at|formatdatetime }}
+                    {% if item.updated_at %}
+                        | Last updated: {{ item.updated_at|formatdatetime }}
+                    {% endif %}
+                </p>
+
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;">
+                    <a class="btn" href="{{ url_for('item_detail', item_id=item.id) }}" style="
+                        flex:1 1 auto; text-align:center; padding:6px 10px; background:#007bff; color:white; border-radius:6px; text-decoration:none;
+                    ">View Details</a>
+
+                    <a class="btn" href="{{ url_for('edit_item', item_id=item.id) }}" style="
+                        flex:1 1 auto; text-align:center; padding:6px 10px; background:#28a745; color:white; border-radius:6px; text-decoration:none;
+                    ">Edit</a>
+
+                    <form action="{{ url_for('delete_item', item_id=item.id) }}" method="post" style="flex:1 1 auto;">
+                        <button type="submit" onclick="return confirm('Are you sure you want to delete this item?');" style="
+                            width:100%; padding:6px 10px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;
+                        ">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
+
+<script>
+    // Hover effect for cards
+    document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-3px)';
+            card.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0)';
+            card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+        });
+    });
+</script>
 {% endblock %}
+

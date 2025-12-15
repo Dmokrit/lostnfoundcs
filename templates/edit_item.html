@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Item</h2>
+<form method="post" enctype="multipart/form-data">
+    <label>Title:</label><br>
+    <input name="title" placeholder="Item Title" value="{{ item.title }}" required><br><br>
+
+    <label>Description:</label><br>
+    <textarea name="description" placeholder="Description">{{ item.description }}</textarea><br><br>
+
+    <label>Location:</label><br>
+    <input name="location" placeholder="Location" value="{{ item.location }}"><br><br>
+
+    <label>Category:</label><br>
+    <select name="category">
+        <option value="Electronics" {% if item.category == "Electronics" %}selected{% endif %}>Electronics</option>
+        <option value="Clothing" {% if item.category == "Clothing" %}selected{% endif %}>Clothing</option>
+        <option value="Documents" {% if item.category == "Documents" %}selected{% endif %}>Documents</option>
+        <option value="Accessories" {% if item.category == "Accessories" %}selected{% endif %}>Accessories</option>
+        <option value="Other" {% if item.category == "Other" %}selected{% endif %}>Other</option>
+    </select><br><br>
+
+    <label>Status:</label><br>
+    <select name="status" required>
+        <option value="Lost" {% if item.status == "Lost" %}selected{% endif %}>Lost</option>
+        <option value="Found" {% if item.status == "Found" %}selected{% endif %}>Found</option>
+    </select><br><br>
+
+    <label>Contact:</label><br>
+    <input name="contact" placeholder="Contact Info" value="{{ item.contact }}"><br><br>
+
+    {% if item.image %}
+        <p>Current Image:</p>
+        <img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" style="max-width:200px;"><br>
+        <input type="checkbox" name="remove_image" value="yes"> Remove current image<br><br>
+    {% endif %}
+
+    <label>Change Image:</label><br>
+    <input type="file" name="image"><br><br>
+
+    <button class="btn" type="submit">Update Item</button>
+</form>
+{% endblock %}
+

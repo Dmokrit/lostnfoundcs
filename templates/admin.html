@@ -2,14 +2,22 @@
 {% block content %}
 <h2>Pending Items</h2>
 <div class="grid">
-{% for item in items %}
-  <div class="card">
-    <h4>{{ item.title }}</h4>
-    {% if item.image %}
-      <img src="{{ url_for('static', filename='uploads/' + item.image) }}">
-    {% endif %}
-    <a class="btn" href="{{ url_for('approve', item_id=item.id) }}">Approve</a>
-  </div>
-{% endfor %}
+    {% for item in items %}
+    <div class="card">
+        {% if item.image %}
+        <img src="{{ url_for('static', filename='uploads/' + item.image) }}">
+        {% endif %}
+        <h4>{{ item.title }}</h4>
+        {% if item.status %}
+        <span style="padding:4px 8px;border-radius:6px;background-color:{% if item.status.lower()=='lost' %}#f44336{% else %}#4caf50{% endif %};color:white;">{{ item.status }}</span>
+        {% endif %}
+        <p class="muted">Posted on: {{ item.created_at|formatdatetime }}</p>
+        <a class="btn" href="{{ url_for('approve', item_id=item.id) }}">Approve</a>
+        <form action="{{ url_for('admin_delete_item', item_id=item.id) }}" method="post" style="display:inline;">
+            <button class="btn danger" type="submit" onclick="return confirm('Delete this item?');">Delete</button>
+        </form>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
+

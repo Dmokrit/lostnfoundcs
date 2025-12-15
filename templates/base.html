@@ -12,7 +12,7 @@
     .card{border:1px solid #ddd;border-radius:6px;padding:10px}
     img{max-width:100%;border-radius:4px}
     .btn{padding:6px 10px;border-radius:4px;background:#2563eb;color:#fff;text-decoration:none}
-    .danger{background:#dc2626}
+    .btn.danger{background:#dc2626}
     .muted{color:#666;font-size:14px}
   </style>
 </head>
@@ -32,12 +32,15 @@
   {% endif %}
 </nav>
 <div class="container">
-  {% with messages = get_flashed_messages() %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+      {% for category, m in messages %}
+        <p style="color:{% if category=='error' %}#dc2626{% else %}#2563eb{% endif %}">{{ m }}</p>
+      {% endfor %}
     {% endif %}
   {% endwith %}
   {% block content %}{% endblock %}
 </div>
 </body>
 </html>
+

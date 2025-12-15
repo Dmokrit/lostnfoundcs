@@ -1,4 +1,5 @@
 import os
+import uuid
 from datetime import datetime
 from flask import (
     Flask, render_template, redirect,
@@ -17,10 +18,9 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
 
-# ===================== DATABASE (RENDER SAFE) =====================
+# ===================== DATABASE =====================
 DATA_DIR = "/tmp"
 os.makedirs(DATA_DIR, exist_ok=True)
-
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATA_DIR}/lost_and_found.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -65,11 +65,18 @@ class Item(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# ===================== TEMPLATE FILTER =====================
+@app.template_filter('formatdatetime')
+def format_datetime(value, format="%b %d, %Y %I:%M %p"):
+    if value is None:
+        return ""
+    return value.strftime(format)
+
 # ===================== ROUTES =====================
 @app.route("/")
 def index():
-    query = Item.query.filter_by(approved=True).order_by(Item.created_at.desc())
-    items = query.all()
+    # Only approved items on homepage
+    items = Item.query.filter_by(approved=True).order_by(Item.created_at.desc()).all()
     return render_template("index.html", items=items)
 
 # ---------------- AUTH ----------------
@@ -80,7 +87,7 @@ def register():
         password = request.form["password"]
 
         if User.query.filter_by(email=email).first():
-            flash("Email already exists")
+            flash("Email already exists", "error")
             return redirect(url_for("register"))
 
         user = User(
@@ -89,7 +96,7 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
-        flash("Account created. Please log in.")
+        flash("Account created. Please log in.", "success")
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -101,7 +108,7 @@ def login():
         if user and check_password_hash(user.password, request.form["password"]):
             login_user(user)
             return redirect(url_for("index"))
-        flash("Invalid email or password")
+        flash("Invalid email or password", "error")
     return render_template("login.html")
 
 @app.route("/logout")
@@ -117,25 +124,25 @@ def post_item():
     if request.method == "POST":
         file = request.files.get("image")
         filename = None
-
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            filename = f"{uuid.uuid4().hex}.{ext}"
             file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
         item = Item(
             title=request.form["title"],
-            description=request.form["description"],
-            location=request.form["location"],
-            category=request.form["category"],
+            description=request.form.get("description"),
+            location=request.form.get("location"),
+            category=request.form.get("category"),
             status=request.form["status"],
-            contact=request.form["contact"],
+            contact=request.form.get("contact"),
             image=filename,
             user_id=current_user.id
         )
 
         db.session.add(item)
         db.session.commit()
-        flash("Item submitted for admin approval.")
+        flash("Item submitted for admin approval.", "success")
         return redirect(url_for("my_items"))
 
     return render_template("post_item.html")
@@ -145,6 +152,69 @@ def post_item():
 def my_items():
     items = Item.query.filter_by(user_id=current_user.id).order_by(Item.created_at.desc()).all()
     return render_template("my_items.html", items=items)
+
+@app.route("/item/<int:item_id>")
+@login_required
+def item_detail(item_id):
+    item = Item.query.get_or_404(item_id)
+    # Allow detail view if approved OR owner OR admin
+    if not item.approved and item.user_id != current_user.id and not current_user.is_admin:
+        abort(404)
+    return render_template("item_detail.html", item=item)
+
+# ---------------- USER EDIT/DELETE ----------------
+@app.route("/edit/<int:item_id>", methods=["GET", "POST"])
+@login_required
+def edit_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    if item.user_id != current_user.id:
+        abort(403)
+    if request.method == "POST":
+        item.title = request.form["title"]
+        item.description = request.form.get("description")
+        item.location = request.form.get("location")
+        item.category = request.form.get("category")
+        item.status = request.form["status"]
+        item.contact = request.form.get("contact")
+
+        file = request.files.get("image")
+        if file and allowed_file(file.filename):
+            if item.image:
+                # Safely remove old image
+                old_path = os.path.join(app.config["UPLOAD_FOLDER"], item.image)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            item.image = f"{uuid.uuid4().hex}.{ext}"
+            file.save(os.path.join(app.config["UPLOAD_FOLDER"], item.image))
+        # Optionally handle "remove_image" checkbox
+        elif request.form.get("remove_image") == "yes" and item.image:
+            old_path = os.path.join(app.config["UPLOAD_FOLDER"], item.image)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+            item.image = None
+
+        item.approved = False  # require re-approval
+        db.session.commit()
+        flash("Item updated. Pending admin approval.", "success")
+        return redirect(url_for("my_items"))
+
+    return render_template("edit_item.html", item=item)
+
+@app.route("/delete/<int:item_id>", methods=["POST"])
+@login_required
+def delete_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    if item.user_id != current_user.id:
+        abort(403)
+    if item.image:
+        path = os.path.join(app.config["UPLOAD_FOLDER"], item.image)
+        if os.path.exists(path):
+            os.remove(path)
+    db.session.delete(item)
+    db.session.commit()
+    flash("Item deleted successfully.", "success")
+    return redirect(url_for("my_items"))
 
 # ---------------- ADMIN ----------------
 @app.route("/admin")
@@ -163,13 +233,27 @@ def approve(item_id):
     item = Item.query.get_or_404(item_id)
     item.approved = True
     db.session.commit()
-    flash("Item approved.")
+    flash("Item approved.", "success")
+    return redirect(url_for("admin"))
+
+@app.route("/admin/delete/<int:item_id>", methods=["POST"])
+@login_required
+def admin_delete_item(item_id):
+    if not current_user.is_admin:
+        abort(403)
+    item = Item.query.get_or_404(item_id)
+    if item.image:
+        path = os.path.join(app.config["UPLOAD_FOLDER"], item.image)
+        if os.path.exists(path):
+            os.remove(path)
+    db.session.delete(item)
+    db.session.commit()
+    flash("Item deleted by admin.", "success")
     return redirect(url_for("admin"))
 
 # ===================== INIT =====================
 with app.app_context():
     db.create_all()
-
     if not User.query.filter_by(email="admin@student.edu").first():
         admin = User(
             email="admin@student.edu",
