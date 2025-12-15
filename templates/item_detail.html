@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ item.title }}</h2>
+<p><strong>Status:</strong> {{ item.status }}</p>
+<p><strong>Category:</strong> {{ item.category }}</p>
+<p><strong>Location:</strong> {{ item.location }}</p>
+<p><strong>Contact:</strong> {{ item.contact }}</p>
+<p>{{ item.description }}</p>
+{% if item.image %}
+<img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" style="max-width:400px;">
+{% endif %}
+{% endblock %}
+

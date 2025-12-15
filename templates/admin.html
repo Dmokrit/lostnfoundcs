@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Pending Items</h2>
+<div class="grid">
+{% for item in items %}
+  <div class="card">
+    <h4>{{ item.title }}</h4>
+    {% if item.image %}
+      <img src="{{ url_for('static', filename='uploads/' + item.image) }}">
+    {% endif %}
+    <a class="btn" href="{{ url_for('approve', item_id=item.id) }}">Approve</a>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

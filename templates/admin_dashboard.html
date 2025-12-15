@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin Dashboard - Pending Items</h2>
+
+{% if pending %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Location</th>
+            <th>Contact</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for item in pending %}
+        <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.status }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.contact }}</td>
+            <td>
+                <a href="{{ url_for('approve_item', id=item.id) }}" class="btn btn-success btn-sm">Approve</a>
+                {% if item.image %}
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#previewModal{{ item.id }}">
+                    Preview
+                </button>
+
+                <div class="modal fade" id="previewModal{{ item.id }}" tabindex="-1" aria-labelledby="previewLabel{{ item.id }}" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="previewLabel{{ item.id }}">{{ item.title }} Image</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body text-center">
+                        <img src="{{ url_for('static', filename='uploads/' ~ item.image) }}" class="img-fluid" alt="Item Image">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No pending items.</p>
+{% endif %}
+{% endblock %}
+
