@@ -1,6 +1,9 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, request, flash, abort
+from flask import (
+    Flask, render_template, redirect,
+    url_for, request, flash, abort
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, UserMixin,
@@ -10,29 +13,33 @@ from flask_login import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# ===================== APP CONFIG =====================
+# ===================== APP SETUP =====================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
 
-# SQLite database in project root (writable on Render)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lost_and_found.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# ===================== DATABASE (RENDER SAFE) =====================
+DATA_DIR = "/tmp"
+os.makedirs(DATA_DIR, exist_ok=True)
 
-# Uploads
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static', 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2 MB
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATA_DIR}/lost_and_found.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+# ===================== UPLOADS =====================
+UPLOAD_FOLDER = os.path.join("static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 # ===================== EXTENSIONS =====================
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+login_manager.login_view = "login"
 
 # ===================== HELPERS =====================
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # ===================== MODELS =====================
 class User(UserMixin, db.Model):
@@ -52,110 +59,103 @@ class Item(db.Model):
     image = db.Column(db.String(200))
     approved = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 # ===================== ROUTES =====================
-@app.route('/')
+@app.route("/")
 def index():
-    q = request.args.get('q', '')
-    category = request.args.get('category', '')
-
-    query = Item.query.filter_by(approved=True)
-
-    if q:
-        query = query.filter(Item.title.contains(q))
-    if category:
-        query = query.filter_by(category=category)
-
-    items = query.order_by(Item.created_at.desc()).all()
-    return render_template('index.html', items=items)
+    query = Item.query.filter_by(approved=True).order_by(Item.created_at.desc())
+    items = query.all()
+    return render_template("index.html", items=items)
 
 # ---------------- AUTH ----------------
-@app.route('/register', methods=['GET', 'POST'])
+@app.route("/register", methods=["GET", "POST"])
 def register():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = generate_password_hash(request.form['password'])
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
 
         if User.query.filter_by(email=email).first():
-            flash('Email already exists')
-            return redirect(url_for('register'))
+            flash("Email already exists")
+            return redirect(url_for("register"))
 
-        user = User(email=email, password=password)
+        user = User(
+            email=email,
+            password=generate_password_hash(password)
+        )
         db.session.add(user)
         db.session.commit()
-        flash('Account created. Please login.')
-        return redirect(url_for('login'))
+        flash("Account created. Please log in.")
+        return redirect(url_for("login"))
 
-    return render_template('register.html')
+    return render_template("register.html")
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == 'POST':
-        user = User.query.filter_by(email=request.form['email']).first()
-        if user and check_password_hash(user.password, request.form['password']):
+    if request.method == "POST":
+        user = User.query.filter_by(email=request.form["email"]).first()
+        if user and check_password_hash(user.password, request.form["password"]):
             login_user(user)
-            return redirect(url_for('index'))
-        flash('Invalid email or password')
+            return redirect(url_for("index"))
+        flash("Invalid email or password")
+    return render_template("login.html")
 
-    return render_template('login.html')
-
-@app.route('/logout')
+@app.route("/logout")
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
 # ---------------- ITEMS ----------------
-@app.route('/post', methods=['GET', 'POST'])
+@app.route("/post", methods=["GET", "POST"])
 @login_required
 def post_item():
-    if request.method == 'POST':
-        file = request.files.get('image')
+    if request.method == "POST":
+        file = request.files.get("image")
         filename = None
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
         item = Item(
-            title=request.form['title'],
-            description=request.form['description'],
-            location=request.form['location'],
-            category=request.form['category'],
-            status=request.form['status'],
-            contact=request.form['contact'],
+            title=request.form["title"],
+            description=request.form["description"],
+            location=request.form["location"],
+            category=request.form["category"],
+            status=request.form["status"],
+            contact=request.form["contact"],
             image=filename,
             user_id=current_user.id
         )
 
         db.session.add(item)
         db.session.commit()
-        flash('Item submitted for admin approval.')
-        return redirect(url_for('my_items'))
+        flash("Item submitted for admin approval.")
+        return redirect(url_for("my_items"))
 
-    return render_template('post_item.html')
+    return render_template("post_item.html")
 
-@app.route('/my-items')
+@app.route("/my-items")
 @login_required
 def my_items():
     items = Item.query.filter_by(user_id=current_user.id).order_by(Item.created_at.desc()).all()
-    return render_template('my_items.html', items=items)
+    return render_template("my_items.html", items=items)
 
 # ---------------- ADMIN ----------------
-@app.route('/admin')
+@app.route("/admin")
 @login_required
 def admin():
     if not current_user.is_admin:
         abort(403)
     items = Item.query.filter_by(approved=False).order_by(Item.created_at.desc()).all()
-    return render_template('admin.html', items=items)
+    return render_template("admin.html", items=items)
 
-@app.route('/approve/<int:item_id>')
+@app.route("/approve/<int:item_id>")
 @login_required
 def approve(item_id):
     if not current_user.is_admin:
@@ -163,23 +163,23 @@ def approve(item_id):
     item = Item.query.get_or_404(item_id)
     item.approved = True
     db.session.commit()
-    flash('Item approved')
-    return redirect(url_for('admin'))
+    flash("Item approved.")
+    return redirect(url_for("admin"))
 
 # ===================== INIT =====================
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    db.create_all()
 
-        # Create default admin if not exists
-        if not User.query.filter_by(email='admin@student.edu').first():
-            admin = User(
-                email='admin@student.edu',
-                password=generate_password_hash('admin123'),
-                is_admin=True
-            )
-            db.session.add(admin)
-            db.session.commit()
+    if not User.query.filter_by(email="admin@student.edu").first():
+        admin = User(
+            email="admin@student.edu",
+            password=generate_password_hash("admin123"),
+            is_admin=True
+        )
+        db.session.add(admin)
+        db.session.commit()
 
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+# ===================== RUN =====================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
